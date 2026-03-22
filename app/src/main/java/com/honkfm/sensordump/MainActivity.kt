@@ -402,7 +402,7 @@ class MainActivity : ComponentActivity() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(top = 13.dp, bottom = 16.dp)
         ) {
 
             if (files.isEmpty()) {
@@ -415,7 +415,7 @@ class MainActivity : ComponentActivity() {
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     items(files) { file ->
                         FileItem(
@@ -445,7 +445,9 @@ class MainActivity : ComponentActivity() {
                 this, arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.READ_PHONE_STATE,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.ACCESS_WIFI_STATE,
+                    Manifest.permission.CHANGE_WIFI_STATE,
                 ), 1
             )
 

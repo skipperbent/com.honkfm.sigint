@@ -5,12 +5,15 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.LocationManager
+import android.net.wifi.WifiManager
+import android.os.BatteryManager
 import android.os.IBinder
 import android.telephony.CellInfoLte
 import android.telephony.TelephonyManager
@@ -65,6 +68,7 @@ class SigintService : Service(), SensorEventListener {
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
 
+
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
         sensorManager.registerListener(this, magSensor, SensorManager.SENSOR_DELAY_NORMAL)
@@ -79,7 +83,7 @@ class SigintService : Service(), SensorEventListener {
                 performFullDump()
                 Log.d("SIGINT", "Adding line to CSV")
 
-                delay(2000) // Svarer til postDelayed, men blokerer ikke tråden
+                delay(2000)
             }
         }
 
@@ -91,7 +95,7 @@ class SigintService : Service(), SensorEventListener {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         //val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
         logFile = File(baseContext.filesDir, "SIGINT_DUMP_$timeStamp.csv")
-        logFile?.appendText("timestamp,lat,lon,alt,gps_accuracy,emf_raw_x,emf_raw_y,emf_raw_z,emf_total,cell_type,cell_rf_cn,cell_rsrp,cell_rsrq,cell_rssi,cell_neighbor_count,barometer_pa,note\n")
+        logFile?.appendText("timestamp,lat,lon,alt,gps_accuracy,emf_raw_x,emf_raw_y,emf_raw_z,emf_total,cell_type,cell_rf_cn,cell_rsrp,cell_rsrq,cell_rssi,cell_neighbor_count,barometer_pa,battery_temp,wifi_count,wifi_main_ssid,note\n")
     }
 
     private fun performFullDump() {
@@ -159,8 +163,17 @@ class SigintService : Service(), SensorEventListener {
         val safeNote = "\"" + AppState.pendingNote.value.replace("\"", "'") + "\""
         AppState.setPendingNote("")
 
+        val batteryStatus = baseContext.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val batteryTemp = (batteryStatus?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10.0
+
+        // WiFi Scan (Kræver ACCESS_WIFI_STATE og CHANGE_WIFI_STATE)
+        val wifiManager = baseContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val wifiInfo = wifiManager.scanResults
+        val wifiCount = wifiInfo.size
+        val mainWifiSsid = wifiManager.connectionInfo.ssid ?: "NONE"
+
         val line =
-            "$ts,$lat,$lon,$alt,$acc,$lastX,$lastY,$lastZ,${AppState.totalEmf.value},$cellType,$rfCn,$rsrp,$rsrq,$rssi,$neighbors,$baro,$safeNote\n"
+            "$ts,$lat,$lon,$alt,$acc,$lastX,$lastY,$lastZ,${AppState.totalEmf.value},$cellType,$rfCn,$rsrp,$rsrq,$rssi,$neighbors,$baro,$batteryTemp,$wifiCount,$mainWifiSsid,$safeNote\n"
 
         // VIGTIGT: Skriv og gennemtving gemning
         try {
