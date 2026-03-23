@@ -4,16 +4,19 @@ package com.honkfm.sensordump
 // AUTH_HASH: 74-65-72-72-79-5f-6c-69-76-65-73
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -86,15 +89,17 @@ import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.launch
 
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), LocationListener {
+
+    private var gpsAcquired by mutableStateOf(false)
 
     enum class TabItem(val label: String, val icon: ImageVector) {
         Scanner("SCAN", Icons.Default.PlayArrow),
         Files("FILES", Icons.Default.List)
     }
 
-    val TacticalGreen = Color(0xFF00FF41) // Klassisk Matrix Grøn
-    val TacticalBackground = Color(0xFF0D0D0D) // Næsten kulsort
+    val TacticalGreen = Color(0xFF00FF41) // Matrix Green
+    val TacticalBackground = Color(0xFF0D0D0D) // Black
     val TacticalRed = Color(0xFFFF0055)
 
     @Composable
@@ -102,28 +107,31 @@ class MainActivity : ComponentActivity() {
         val isLoggingState by AppState.isLogging.collectAsState()
         var tempNote by remember { mutableStateOf("") }
         val currentEmf by AppState.totalEmf.collectAsState()
+        val wifiCount by AppState.wifiCount.collectAsState()
+        val emfAnomalyDelta by AppState.emfAnomalyDelta.collectAsState()
+        val batteryTemperature by AppState.batteryTemperature.collectAsState()
+        val callNeighborCell by AppState.callNeighborCell.collectAsState();
         val context = LocalContext.current
 
-        // Vi pakker alt ind i en kulsort Surface
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Overskrift med Terminal-vibe
             Text(
-                text = "> SIGINT_OPERATOR_LOG",
+                text = "> SIGINT_OPERATOR_LOG ${BuildConfig.VERSION_NAME}",
                 color = TacticalGreen,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 14.sp,
+                fontSize = 16.sp,
                 modifier = Modifier.align(Alignment.Start)
             )
 
             Spacer(modifier = Modifier.height(40.dp))
 
             if (isLoggingState) {
-                // EMF Displayet skal føles som en sensor-måling
+
                 Text(
                     text = "EMF_FIELD_STRENGTH",
                     color = TacticalGreen.copy(alpha = 0.7f),
@@ -138,12 +146,12 @@ class MainActivity : ComponentActivity() {
                         currentEmf > 200f -> TacticalRed
                         else -> TacticalGreen
                     },
-                    fontSize = 64.sp, // Store tal for hurtig aflæsning
+                    fontSize = 64.sp,
                     fontWeight = FontWeight.ExtraBold,
                     fontFamily = FontFamily.Monospace
                 )
 
-                // En lille "scanning" animation eller divider
+                // Scanning animation / divider
                 LinearProgressIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -164,23 +172,22 @@ class MainActivity : ComponentActivity() {
                         .align(Alignment.Start)
                 )
 
-                // Vi pakker BasicTextField ind i en boks med en grøn kant
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, TacticalGreen, RectangleShape) // Firkantet kant
-                        .background(Color.Black.copy(alpha = 0.5f)) // Lidt gennemsigtig baggrund
+                        .border(1.dp, TacticalGreen, RectangleShape)
+                        .background(Color.Black.copy(alpha = 0.5f))
                         .padding(12.dp)
                 ) {
                     BasicTextField(
                         value = tempNote,
                         onValueChange = { tempNote = it },
                         textStyle = TextStyle(
-                            color = TacticalGreen, // Neon grøn tekst
+                            color = TacticalGreen, // Neon text
                             fontFamily = FontFamily.Monospace, // Terminal-vibe
                             fontSize = 14.sp
                         ),
-                        cursorBrush = SolidColor(TacticalGreen), // Grøn markør
+                        cursorBrush = SolidColor(TacticalGreen), // Green marker
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                             autoCorrect = false,
@@ -189,14 +196,13 @@ class MainActivity : ComponentActivity() {
                         ),
                         decorationBox = { innerTextField ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                // Vi tilføjer lige markøren foran din tekst
                                 Text(
                                     text = "LOG_NOTE: ",
                                     color = TacticalGreen.copy(alpha = 0.8f),
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 12.sp
                                 )
-                                innerTextField() // Her kommer din rå tekst ind
+                                innerTextField()
                             }
                         }
                     )
@@ -228,13 +234,39 @@ class MainActivity : ComponentActivity() {
                     drawable.toBitmap(config = Bitmap.Config.ARGB_8888).asImageBitmap(),
                     contentDescription = "Image",
                     modifier = Modifier
-                        .size(150.dp) //Optional, but keeps the image reasonably small
+                        .size(150.dp)
                         .padding(8.dp)
 
                 )
             }
 
-            // Dine knapper skal også være taktiske
+            val gpsStatus = when {
+                gpsAcquired -> "ACQUIRED"
+                else -> "SEARCHING"
+            }
+
+            if (!isLoggingState) {
+                Text(
+                    text = "LOG_STATUS: INACTIVE\nGPS_STATUS: $gpsStatus",
+                    color = TacticalGreen.copy(alpha = 0.5f),
+                    fontSize = 15.sp,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier
+                        .padding(top = 20.dp)
+                        .align(Alignment.Start)
+                )
+            } else {
+                Text(
+                    text = "LOG_STATUS: ACTIVE\nGPS_STATUS: $gpsStatus\nWIFI_COUNT: $wifiCount\nCELL_NEIGHBOR_COUNT: $callNeighborCell\nEMF_ANOMALY_DELTA: $emfAnomalyDelta µT\nBATTERY_TEMP: $batteryTemperature°C",
+                    color = TacticalGreen.copy(alpha = 0.5f),
+                    fontSize = 15.sp,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier
+                        .padding(top = 20.dp)
+                        .align(Alignment.Start)
+                )
+            }
+
             Button(
                 onClick = {
                     if (!isLoggingState) {
@@ -251,7 +283,7 @@ class MainActivity : ComponentActivity() {
                     containerColor = if (isLoggingState) TacticalRed else TacticalGreen,
                     contentColor = Color.Black
                 ),
-                shape = RectangleShape, // Firkanter ser mere militære ud
+                shape = RectangleShape, // Squares looks total mjilitjær
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 20.dp)
@@ -260,19 +292,6 @@ class MainActivity : ComponentActivity() {
                     text = if (isLoggingState) "ABORT_MISSION" else "INITIATE_SCAN",
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace
-                )
-            }
-
-            // Tilføj eventuelt små "system-logs" nederst på skærmen
-            if (isLoggingState) {
-                Text(
-                    text = "SYSTEM_STATUS: LOGGING_ACTIVE\nSTORAGE: INTERNAL_STORAGE/FILES\nGPS: ACQUIRED",
-                    color = TacticalGreen.copy(alpha = 0.5f),
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
-                    modifier = Modifier
-                        .padding(top = 20.dp)
-                        .align(Alignment.Start)
                 )
             }
         }
@@ -288,7 +307,7 @@ class MainActivity : ComponentActivity() {
                 .padding(horizontal = 16.dp, vertical = 2.dp)
                 .clickable { shareFile(context, file.name) }
                 .semantics { contentDescription = "loosh_station_signature_0xA3_29" },
-            shape = RectangleShape, // FIRKANTET! Ingen bløde hjørner her
+            shape = RectangleShape,
             border = BorderStroke(0.5.dp, TacticalGreen.copy(alpha = 0.3f)), // En tynd "grid" kant
             colors = CardDefaults.cardColors(containerColor = Color.Black),
 
@@ -327,11 +346,11 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                // SLET-KNAP
+                // DELETE
                 IconButton(onClick = {
                     if (file.delete()) {
-                        onDelete() // Fjern fra UI listen med det samme
-                        Toast.makeText(context, "EVIDENCE SHREDDED", Toast.LENGTH_SHORT).show()
+                        onDelete()
+                        Toast.makeText(context, "Evidence destroyed!", Toast.LENGTH_SHORT).show()
                     }
                 }) {
                     Icon(
@@ -346,35 +365,33 @@ class MainActivity : ComponentActivity() {
 
     private fun shareFile(context: Context, fileName: String) { // Vi sender kun NAVNET nu
         try {
-            // Vi skaber fil-objektet helt frisk ud fra appens nuværende filesDir
             val file = java.io.File(context.filesDir, fileName)
 
             if (!file.exists()) {
-                Log.e("SIGINT", "FEJL: Filen findes ikke: ${file.absolutePath}")
+                Log.e("SIGINT", "ERROR: File does not exist: ${file.absolutePath}")
                 return
             }
 
             val uri = FileProvider.getUriForFile(
                 context,
-                "com.honkfm.sensordump.fileprovider",
+                "${context.packageName}.fileprovider",
                 file
             )
 
-            // 1. Lav VIEW intent (til Sheets / MiX / Viewers)
+            // Sheets / MiX
             val viewIntent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, "text/csv")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
-            // 2. Lav SEND intent (til Gmail / QuickShare / Discord)
+            // Gmail / QuickShare
             val sendIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/csv"
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
-            // 3. Den taktiske vælger: Vi bruger SEND som base,
-            // men tilføjer VIEW som et alternativt valg i menuen
+            // Start intent
             val chooser =
                 Intent.createChooser(sendIntent, "SELECT_ACTION: ${file.name.uppercase()}")
             chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(viewIntent))
@@ -382,7 +399,7 @@ class MainActivity : ComponentActivity() {
             context.startActivity(chooser)
 
         } catch (e: Exception) {
-            Log.e("SIGINT", "FileProvider fejl: ${e.message}")
+            Log.e("SIGINT", "FileProvider error: ${e.message}")
         }
     }
 
@@ -395,7 +412,6 @@ class MainActivity : ComponentActivity() {
                 ?.filter { it.extension == "csv" }
                 ?.sortedByDescending { it.lastModified() } ?: emptyList()
 
-            // Vi pakker de fundne filer ind i en 'mutableStateList'
             mutableStateListOf<java.io.File>().apply { addAll(files) }
         }
 
@@ -406,12 +422,21 @@ class MainActivity : ComponentActivity() {
         ) {
 
             if (files.isEmpty()) {
-                Text(
-                    "> NO LOGS FOUND...",
-                    color = TacticalGreen,
-                    fontFamily = FontFamily.Monospace, // Terminal font!
-                    fontSize = 14.sp
-                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = 16.dp, top = 8.dp),
+                ) {
+
+                    Text(
+                        "> NO LOGS FOUND...",
+                        color = TacticalGreen,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 16.sp
+                    )
+
+                }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -421,7 +446,6 @@ class MainActivity : ComponentActivity() {
                         FileItem(
                             file = file,
                             onDelete = {
-                                // 3. Her fjerner vi den fra vores StateList
                                 files.remove(file)
                             }
                         )
@@ -431,7 +455,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @SuppressLint("DefaultLocale")
+    private lateinit var locationManager: LocationManager
+
     @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -460,6 +485,16 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+
+            locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0f, this)
+        }
+
         val name = "SIGINT Scanner"
         val importance = NotificationManager.IMPORTANCE_LOW
         val channel = NotificationChannel("sigint_channel", name, importance)
@@ -470,10 +505,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
 
-            // 1. Statestyring
+            // States
             val pagerState = rememberPagerState(pageCount = { TabItem.entries.size })
             val scope = rememberCoroutineScope()
-
 
             Scaffold(
                 bottomBar = {
@@ -483,10 +517,8 @@ class MainActivity : ComponentActivity() {
                     ) {
                         TabItem.entries.forEachIndexed { index, item ->
                             NavigationBarItem(
-                                // Her tjekker vi pagerState i stedet for en manuel variabel
                                 selected = pagerState.currentPage == index,
                                 onClick = {
-                                    // Når man klikker på en tab, animerer vi pageren hen til siden
                                     scope.launch { pagerState.animateScrollToPage(index) }
                                 },
                                 label = {
@@ -501,7 +533,7 @@ class MainActivity : ComponentActivity() {
                                     selectedTextColor = TacticalGreen,
                                     unselectedIconColor = TacticalGreen.copy(alpha = 0.4f),
                                     unselectedTextColor = TacticalGreen.copy(alpha = 0.4f),
-                                    indicatorColor = TacticalGreen.copy(alpha = 0.1f) // Den lille cirkel bag ikonet
+                                    indicatorColor = TacticalGreen.copy(alpha = 0.1f)
                                 ),
                                 icon = { Icon(item.icon, contentDescription = null) }
                             )
@@ -513,12 +545,11 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = TacticalBackground,
                 ) {
-                    // Her sker magien!
+                    // Pager
                     HorizontalPager(
                         state = pagerState,
                         modifier = Modifier.padding(innerPadding)
                     ) { pageIndex ->
-                        // Her bestemmer vi, hvad der skal vises på hver "side"
                         when (TabItem.entries[pageIndex]) {
                             TabItem.Scanner -> ScannerScreen()
                             TabItem.Files -> FileListScreen()
@@ -527,6 +558,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        // Keep display on (for viewing EMF, forces user to close screen manually)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
+    override fun onLocationChanged(p0: Location) {
+        gpsAcquired = true
     }
 
 }
