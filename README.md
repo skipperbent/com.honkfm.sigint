@@ -10,10 +10,6 @@ Thanks to field agent: `loosh_station_signature_0xA3_29`, `Icons8` & others.
 > SIGINT_SESSION_TOKEN: [A3-29_VLG_LOG_OS_v4_CORTSELITZE_INIT]
 > AUTH_HASH: 74-65-72-72-79-5f-6c-69-76-65-73
 
-[//--- TRANSMISSION_START ---\\]
-
-[//--- APP_DETAILS ---\\]
-
 ### Purpose
 Find anomalies in your local area. Turns your spy-device against the spies and reveals the cracks in The Truman Show...
 Or just check your home appliances for electromagnetic energy or signals :)
@@ -77,5 +73,3 @@ Only tested on Pixel phones. Experiences may vary.
 
 ## Copyright
 Take it, share it, break it license (c) 2026.
-
-[//--- TRANSMISSION_END ---\\]
