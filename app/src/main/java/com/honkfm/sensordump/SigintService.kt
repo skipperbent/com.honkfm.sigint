@@ -50,7 +50,6 @@ class SigintService : Service(), SensorEventListener, LocationListener {
     private var lastX = 0f
     private var lastY = 0f
     private var lastZ = 0f
-    private var pressurePa = 0f
 
     private var currentLoc: android.location.Location? = null
     private var wifiMainSsid = ""
@@ -72,7 +71,6 @@ class SigintService : Service(), SensorEventListener, LocationListener {
 
         // Turn into background service
         startForeground(1, notification)
-
 
         // GPS Request
         if (ActivityCompat.checkSelfPermission(
@@ -255,7 +253,7 @@ class SigintService : Service(), SensorEventListener, LocationListener {
         val declinationError = measuredAzimuth - expectedDec
 
         val line =
-            "$ts,$lat,$lon,$alt,$acc,$lastX,$lastY,$lastZ,${AppState.totalEmf.value},$emfAccuracy,$emfExpectedStrength,${AppState.emfAnomalyDelta.value},$declinationError,$cellType,$rfCn,$rsrp,$rsrq,$rssi,${AppState.callNeighborCell.value},$pressurePa,${AppState.batteryTemperature.value},${AppState.wifiCount.value},$wifiMainSsid,$safeNote\n"
+            "$ts,$lat,$lon,$alt,$acc,$lastX,$lastY,$lastZ,${AppState.totalEmf.value},$emfAccuracy,$emfExpectedStrength,${AppState.emfAnomalyDelta.value},$declinationError,$cellType,$rfCn,$rsrp,$rsrq,$rssi,${AppState.callNeighborCell.value},${AppState.barometerPa.value},${AppState.batteryTemperature.value},${AppState.wifiCount.value},$wifiMainSsid,$safeNote\n"
 
         // Force write
         try {
@@ -283,7 +281,7 @@ class SigintService : Service(), SensorEventListener, LocationListener {
         }
 
         if (event?.sensor?.type == Sensor.TYPE_PRESSURE) {
-            pressurePa = event.values[0];
+            AppState.setBarometerPa(event.values[0])
         }
     }
 

@@ -116,9 +116,9 @@ class MainActivity : ComponentActivity(), LocationListener {
         val scanRuntime by AppState.scanRunTime.collectAsState()
         val scanLines by AppState.scanLines.collectAsState()
         val scanSizeBytes by AppState.scanSize.collectAsState()
+        val barometerPa by AppState.barometerPa.collectAsState()
 
         val context = LocalContext.current
-
 
         Column(
             modifier = Modifier
@@ -269,7 +269,7 @@ class MainActivity : ComponentActivity(), LocationListener {
                             context,
                             scanSizeBytes
                         )
-                    } / ${scanLines} LINES\nGPS_STATUS: $gpsStatus\nWIFI_COUNT: $wifiCount\nCELL_NEIGHBOR_COUNT: $callNeighborCell\nEMF_ANOMALY_DELTA: $emfAnomalyDelta µT\nBATTERY_TEMP: $batteryTemperature°C",
+                    } / ${scanLines} LINES\nGPS_STATUS: $gpsStatus\nWIFI_COUNT: $wifiCount\nCELL_NEIGHBOR_COUNT: $callNeighborCell\nEMF_ANOMALY_DELTA: $emfAnomalyDelta µT\nBAROMETER_HPA: $barometerPa\nBATTERY_TEMP: $batteryTemperature°C",
                     color = TacticalGreen.copy(alpha = 0.5f),
                     fontSize = 15.sp,
                     fontFamily = FontFamily.Monospace,

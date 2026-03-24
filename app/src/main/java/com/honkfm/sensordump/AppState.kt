@@ -3,7 +3,7 @@ package com.honkfm.sensordump
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-public object AppState {
+object AppState {
     private val _isLogging = MutableStateFlow(false)
     private val _totalEmf = MutableStateFlow(0.0f)
     private val _pendingNote = MutableStateFlow("")
@@ -14,6 +14,7 @@ public object AppState {
     private val _scanRunTime = MutableStateFlow(0L)
     private val _scanLines = MutableStateFlow(0)
     private val _scanSize = MutableStateFlow(0L)
+    private val _barometerPa = MutableStateFlow(0F)
 
     val isLogging = _isLogging.asStateFlow()
     val totalEmf = _totalEmf.asStateFlow()
@@ -26,6 +27,7 @@ public object AppState {
     var scanStartTime = 0L
     val scanRunTime = _scanRunTime.asStateFlow()
     val scanSize =  _scanSize.asStateFlow()
+    val barometerPa = _barometerPa.asStateFlow()
 
     fun addLine(sizeBytes: Long = 0) {
         _scanLines.value++
@@ -49,6 +51,10 @@ public object AppState {
         _emf_anomaly_delta.value = value
     }
 
+    fun setBarometerPa(pa: Float) {
+        _barometerPa.value = pa
+    }
+
     fun setIsLogging(running: Boolean) {
         _isLogging.value = running
 
@@ -58,6 +64,7 @@ public object AppState {
             _scanRunTime.value = 0
             _scanLines.value = 0
             _scanSize.value = 0
+            _barometerPa.value = 0F
         }
     }
 

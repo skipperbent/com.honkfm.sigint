@@ -22,10 +22,11 @@ If you do not need the to watch the sensor info in real-time or to save battery,
 
 #### Spot the anomalies
 - `GPS_STATUS` SUDDENLY SWITCHING TO `SEARCHING`
+- `WIFI_COUNT` goes above 0 in a remote area.
 - `CELL_NEIGHBOR_COUNT` jumps or disappears.
 - `EMF_ANOMALY_DELTA` goes above `5 µT`.
 - Sudden jumps or drops in `BATTERY_TEMP`.
-- `WIFI_COUNT` goes above 0 in a remote area.
+- `BAROMETER_HPA` pressure falls below 0.5
 
 **Note:** If any of the criteria above are met, it is recommended to stop immediately and let it scan for 30-seconds to gather more intelligence about the anomaly.
 
