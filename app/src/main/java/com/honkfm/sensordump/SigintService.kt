@@ -145,7 +145,10 @@ class SigintService : Service(), SensorEventListener, LocationListener {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         //val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
         logFile = File(baseContext.filesDir, "SIGINT_DUMP_$timeStamp.csv")
-        logFile?.appendText("timestamp,lat,lon,alt,gps_accuracy,emf_raw_x,emf_raw_y,emf_raw_z,emf_total,emf_accuracy,emf_expected_strength,emf_anomaly_delta,declination_err,cell_type,cell_rf_cn,cell_rsrp,cell_rsrq,cell_rssi,cell_neighbor_count,barometer_pa,battery_temp,wifi_count,wifi_main_ssid,note\n")
+        val headerTxt =
+            "timestamp,lat,lon,alt,gps_accuracy,emf_raw_x,emf_raw_y,emf_raw_z,emf_total,emf_accuracy,emf_expected_strength,emf_anomaly_delta,declination_err,cell_type,cell_rf_cn,cell_rsrp,cell_rsrq,cell_rssi,cell_neighbor_count,barometer_pa,battery_temp,wifi_count,wifi_main_ssid,note\n"
+        logFile?.appendText(headerTxt)
+        AppState.addLine(headerTxt.length.toLong())
     }
 
     private fun performFullDump() {
@@ -263,6 +266,7 @@ class SigintService : Service(), SensorEventListener, LocationListener {
                 null,
                 null
             )
+            AppState.addLine(line.length.toLong())
         } catch (e: Exception) {
             e.printStackTrace()
         }

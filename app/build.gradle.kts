@@ -11,8 +11,8 @@ android {
         applicationId = "com.honkfm.sensordump"
         minSdk = 29
         targetSdk = 34
-        versionCode = 12
-        versionName = "1.2"
+        versionCode = 121
+        versionName = "1.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

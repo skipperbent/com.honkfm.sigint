@@ -15,6 +15,8 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
+import android.text.format.DateUtils
+import android.text.format.Formatter
 import android.util.Log
 import android.view.WindowManager
 import android.widget.Toast
@@ -110,7 +112,11 @@ class MainActivity : ComponentActivity(), LocationListener {
         val wifiCount by AppState.wifiCount.collectAsState()
         val emfAnomalyDelta by AppState.emfAnomalyDelta.collectAsState()
         val batteryTemperature by AppState.batteryTemperature.collectAsState()
-        val callNeighborCell by AppState.callNeighborCell.collectAsState();
+        val callNeighborCell by AppState.callNeighborCell.collectAsState()
+        val scanRuntime by AppState.scanRunTime.collectAsState()
+        val scanLines by AppState.scanLines.collectAsState()
+        val scanSizeBytes by AppState.scanSize.collectAsState()
+
         val context = LocalContext.current
 
 
@@ -121,7 +127,7 @@ class MainActivity : ComponentActivity(), LocationListener {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "> SIGINT_OPERATOR_LOG ${BuildConfig.VERSION_NAME}",
+                text = "> SIGINT_OPERATOR_LOG v${BuildConfig.VERSION_NAME}",
                 color = TacticalGreen,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 16.sp,
@@ -256,8 +262,14 @@ class MainActivity : ComponentActivity(), LocationListener {
                         .align(Alignment.Start)
                 )
             } else {
+
                 Text(
-                    text = "LOG_STATUS: ACTIVE\nGPS_STATUS: $gpsStatus\nWIFI_COUNT: $wifiCount\nCELL_NEIGHBOR_COUNT: $callNeighborCell\nEMF_ANOMALY_DELTA: $emfAnomalyDelta µT\nBATTERY_TEMP: $batteryTemperature°C",
+                    text = "LOG_STATUS: ACTIVE (${DateUtils.formatElapsedTime(scanRuntime / 60 / 60 / 60 / 60 / 60)})\n            ${
+                        Formatter.formatShortFileSize(
+                            context,
+                            scanSizeBytes
+                        )
+                    } / ${scanLines} LINES\nGPS_STATUS: $gpsStatus\nWIFI_COUNT: $wifiCount\nCELL_NEIGHBOR_COUNT: $callNeighborCell\nEMF_ANOMALY_DELTA: $emfAnomalyDelta µT\nBATTERY_TEMP: $batteryTemperature°C",
                     color = TacticalGreen.copy(alpha = 0.5f),
                     fontSize = 15.sp,
                     fontFamily = FontFamily.Monospace,
