@@ -375,7 +375,7 @@ class MainActivity : ComponentActivity(), LocationListener {
         }
     }
 
-    private fun shareFile(context: Context, fileName: String) { // Vi sender kun NAVNET nu
+    private fun shareFile(context: Context, fileName: String) {
         try {
             val file = java.io.File(context.filesDir, fileName)
 
